@@ -172,10 +172,3 @@ The contract is organized into multiple files for better code organization:
 ## Integration with Sanctum
 
 This project relies on Sanctum's API for SPL Stake Pool operations. The Forest Lab contract handles the business logic and record-keeping, while actual staking operations are performed through Sanctum.
-
-## Future Developments
-
-- Enhanced dashboard for staking analytics
-- Integration with Jupiter for automated token swaps
-- Cross-chain LST bridging capabilities
-- Governance systems for decentralized project management
