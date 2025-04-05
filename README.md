@@ -32,8 +32,29 @@ pub fn initialize_platform(
     min_stake_amount: u64,
     admin_wallet: Pubkey,
 ) -> Result<()> {
-    // Platform initialization logic
-    // ...
+    let platform = &mut ctx.accounts.platform;
+    
+    // Validate fee percentages don't exceed 10000 (100%)
+    require!(platform_fee <= 10000, PlatformError::InvalidFeePercentage);
+    
+    // Initialize platform with the given parameters
+    platform.admin = admin_wallet;
+    platform.platform_fee = platform_fee;
+    platform.min_stake_amount = min_stake_amount;
+    platform.total_staked = 0;
+    platform.project_count = 0;
+    platform.is_paused = false;
+    platform.version = 1;
+    
+    // Emit platform initialization event
+    emit!(PlatformInitialized {
+        admin: admin_wallet,
+        platform_fee,
+        min_stake_amount,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+    
+    Ok(())
 }
 ```
 
@@ -54,8 +75,52 @@ pub fn register_project(
     lst_mint: Pubkey,
     apy_estimate: u16,
 ) -> Result<()> {
-    // Project registration logic
-    // ...
+    let platform = &mut ctx.accounts.platform;
+    let project = &mut ctx.accounts.project;
+    let authority = &ctx.accounts.authority;
+    
+    // Validate inputs
+    require!(!name.is_empty(), PlatformError::InvalidProjectName);
+    require!(!symbol.is_empty(), PlatformError::InvalidTokenSymbol);
+    require!(funding_goal > 0, PlatformError::InvalidFundingGoal);
+    require!(duration > 0, PlatformError::InvalidDuration);
+    require!(apy_estimate <= 2000, PlatformError::InvalidAPYEstimate);
+    
+    // Initialize project data
+    project.name = name;
+    project.symbol = symbol;
+    project.description = description;
+    project.website = website;
+    project.image_uri = image_uri;
+    project.authority = authority.key();
+    project.lst_mint = lst_mint;
+    project.funding_goal = funding_goal;
+    project.total_staked = 0;
+    project.unique_stakers = 0;
+    project.start_time = Clock::get()?.unix_timestamp;
+    project.end_time = Clock::get()?.unix_timestamp + duration;
+    project.apy_estimate = apy_estimate;
+    project.rewards_claimed = 0;
+    project.platform_fees_collected = 0;
+    project.project_fees_collected = 0;
+    project.is_active = true;
+    project.current_epoch = Clock::get()?.epoch;
+    
+    // Update platform statistics
+    platform.project_count += 1;
+    
+    // Emit project registration event
+    emit!(ProjectRegistered {
+        project: project.key(),
+        authority: authority.key(),
+        name: name.clone(),
+        symbol: symbol.clone(),
+        funding_goal,
+        duration,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+    
+    Ok(())
 }
 ```
 
@@ -69,8 +134,45 @@ pub fn record_project_stake(
     amount: u64,
     lst_amount: u64,
 ) -> Result<()> {
-    // Staking record logic
-    // ...
+    let platform = &mut ctx.accounts.platform;
+    let project = &mut ctx.accounts.project;
+    let user_stake = &mut ctx.accounts.user_stake;
+    let user = &ctx.accounts.user;
+    
+    // Validate stake amount
+    require!(amount >= platform.min_stake_amount, PlatformError::InsufficientStakeAmount);
+    
+    // Check if this is the first stake from this user
+    let is_new_staker = user_stake.total_staked == 0;
+    
+    // Update user stake record
+    user_stake.user = user.key();
+    user_stake.project = project.key();
+    user_stake.total_staked += amount;
+    user_stake.lst_balance += lst_amount;
+    user_stake.last_stake_time = Clock::get()?.unix_timestamp;
+    user_stake.last_stake_epoch = Clock::get()?.epoch;
+    
+    // Update project statistics
+    project.total_staked += amount;
+    if is_new_staker {
+        project.unique_stakers += 1;
+    }
+    
+    // Update platform statistics
+    platform.total_staked += amount;
+    
+    // Emit staking event
+    emit!(StakeRecorded {
+        user: user.key(),
+        project: project.key(),
+        amount,
+        lst_amount,
+        timestamp: Clock::get()?.unix_timestamp,
+        epoch: Clock::get()?.epoch,
+    });
+    
+    Ok(())
 }
 ```
 
@@ -84,8 +186,50 @@ pub fn process_epoch_rewards(
     epoch: u64,
     total_rewards: u64,
 ) -> Result<()> {
-    // Reward processing logic
-    // ...
+    let platform = &mut ctx.accounts.platform;
+    let project = &mut ctx.accounts.project;
+    let reward_vault = &ctx.accounts.reward_vault;
+    
+    // Validate inputs
+    require!(epoch == Clock::get()?.epoch - 1, PlatformError::InvalidEpoch);
+    require!(project.current_epoch < epoch, PlatformError::EpochAlreadyProcessed);
+    
+    // Calculate fee splits
+    let platform_fee = (total_rewards * platform.platform_fee as u64) / 10000;
+    let project_fee = (total_rewards * project.project_fee as u64) / 10000;
+    let user_rewards = total_rewards - platform_fee - project_fee;
+    
+    // Update project reward statistics
+    project.current_epoch = epoch;
+    project.total_rewards_for_epoch = total_rewards;
+    project.user_rewards_for_epoch = user_rewards;
+    project.platform_fees_collected += platform_fee;
+    project.project_fees_collected += project_fee;
+    
+    // Calculate APY based on rewards and total staked
+    let annualized_rewards = total_rewards * 365 / 2; // Assuming ~2 days per epoch
+    let apy = if project.total_staked > 0 {
+        (annualized_rewards * 10000) / project.total_staked
+    } else {
+        0
+    };
+    
+    // Update APY estimate (smoothed)
+    project.apy_estimate = ((project.apy_estimate as u64 * 9 + apy) / 10) as u16;
+    
+    // Emit reward processing event
+    emit!(EpochRewardsProcessed {
+        project: project.key(),
+        epoch,
+        total_rewards,
+        user_rewards,
+        platform_fee,
+        project_fee,
+        apy: project.apy_estimate,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+    
+    Ok(())
 }
 ```
 
@@ -99,8 +243,133 @@ pub fn create_lockup(
     amount: u64,
     duration: i64,
 ) -> Result<()> {
-    // Lockup creation logic
-    // ...
+    let project = &ctx.accounts.project;
+    let user_stake = &mut ctx.accounts.user_stake;
+    let lockup = &mut ctx.accounts.lockup;
+    let user = &ctx.accounts.user;
+    
+    // Validate inputs
+    require!(amount > 0, PlatformError::InvalidLockupAmount);
+    require!(duration >= 7 * 24 * 60 * 60, PlatformError::InvalidLockupDuration); // Minimum 7 days
+    require!(user_stake.lst_balance >= amount, PlatformError::InsufficientLSTBalance);
+    
+    // Calculate bonus multiplier based on duration
+    // 1-3 months: 1.2x, 3-6 months: 1.5x, 6+ months: 2x
+    let bonus_multiplier = if duration <= 90 * 24 * 60 * 60 {
+        120 // 1.2x
+    } else if duration <= 180 * 24 * 60 * 60 {
+        150 // 1.5x
+    } else {
+        200 // 2x
+    };
+    
+    // Initialize lockup data
+    lockup.user = user.key();
+    lockup.project = project.key();
+    lockup.amount = amount;
+    lockup.start_time = Clock::get()?.unix_timestamp;
+    lockup.end_time = Clock::get()?.unix_timestamp + duration;
+    lockup.bonus_multiplier = bonus_multiplier;
+    lockup.is_active = true;
+    lockup.rewards_claimed = 0;
+    
+    // Update user stake
+    user_stake.locked_amount += amount;
+    user_stake.lst_balance -= amount;
+    
+    // Emit lockup creation event
+    emit!(LockupCreated {
+        user: user.key(),
+        project: project.key(),
+        lockup: lockup.key(),
+        amount,
+        duration,
+        bonus_multiplier,
+        end_time: lockup.end_time,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+    
+    Ok(())
+}
+```
+
+### Reward Claim
+
+Users can claim their accumulated rewards from staking and lockups.
+
+```rust
+pub fn claim_rewards(
+    ctx: Context<ClaimRewards>,
+    amount: u64,
+) -> Result<()> {
+    let project = &mut ctx.accounts.project;
+    let user_stake = &mut ctx.accounts.user_stake;
+    let user = &ctx.accounts.user;
+    let reward_vault = &ctx.accounts.reward_vault;
+    
+    // Validate inputs
+    require!(amount > 0, PlatformError::InvalidClaimAmount);
+    require!(user_stake.pending_rewards >= amount, PlatformError::InsufficientRewards);
+    
+    // Update user stake
+    user_stake.pending_rewards -= amount;
+    user_stake.total_rewards_claimed += amount;
+    user_stake.last_claim_time = Clock::get()?.unix_timestamp;
+    
+    // Update project statistics
+    project.rewards_claimed += amount;
+    
+    // Emit reward claim event
+    emit!(RewardsClaimed {
+        user: user.key(),
+        project: project.key(),
+        amount,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+    
+    Ok(())
+}
+```
+
+### Restaking Implementation
+
+Advanced yield strategy through restaking mechanisms.
+
+```rust
+pub fn restake_rewards(
+    ctx: Context<RestakeRewards>,
+    amount: u64,
+) -> Result<()> {
+    let project = &mut ctx.accounts.project;
+    let user_stake = &mut ctx.accounts.user_stake;
+    let user = &ctx.accounts.user;
+    
+    // Validate inputs
+    require!(amount > 0, PlatformError::InvalidRestakeAmount);
+    require!(user_stake.pending_rewards >= amount, PlatformError::InsufficientRewards);
+    
+    // Calculate LST amount to mint (using current exchange rate)
+    let lst_amount = (amount * project.lst_exchange_rate) / 10000;
+    
+    // Update user stake
+    user_stake.pending_rewards -= amount;
+    user_stake.total_staked += amount;
+    user_stake.lst_balance += lst_amount;
+    user_stake.last_stake_time = Clock::get()?.unix_timestamp;
+    
+    // Update project statistics
+    project.total_staked += amount;
+    
+    // Emit restaking event
+    emit!(RewardsRestaked {
+        user: user.key(),
+        project: project.key(),
+        amount,
+        lst_amount,
+        timestamp: Clock::get()?.unix_timestamp,
+    });
+    
+    Ok(())
 }
 ```
 
