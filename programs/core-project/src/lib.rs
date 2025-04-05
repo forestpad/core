@@ -1,22 +1,11 @@
-// use anchor_lang::prelude::*;
-// use anchor_lang::solana_program::{
-//     program::{invoke, invoke_signed},
-//     system_instruction,
-// };
-// use anchor_spl::{
-//     associated_token::{self, AssociatedToken},
-//     token::{self, Mint, Token, TokenAccount, TokenInterface, MintInterface},
-// };
-// use std::convert::TryInto;
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
-    program::{invoke, invoke_signed},
+    program::*, // {invoke, invoke_signed}
     system_instruction,
 };
 use anchor_spl::{
-    associated_token::{self, AssociatedToken},
-    token::{self, Token},
-    token_interface::{TokenInterface, TokenAccount, Mint, MintInterface},
+    associated_token::AssociatedToken,
+    token::{self, Token, TokenAccount, Mint},
 };
 use std::convert::TryInto;
 
@@ -827,11 +816,8 @@ pub struct CreateLockup<'info> {
     )]
     pub lockup: Account<'info, Lockup>,
     
-    #[account(
-        mut,
-        token::authority = user,
-    )]
-    pub user_token_account: InterfaceAccount<'info, TokenInterface>,
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,  // token_interface 대신 token 모듈 사용
     
     #[account(
         init_if_needed,
@@ -839,9 +825,9 @@ pub struct CreateLockup<'info> {
         associated_token::mint = lst_mint,
         associated_token::authority = lockup,
     )]
-    pub lockup_vault: InterfaceAccount<'info, TokenInterface>,
+    pub lockup_vault: Account<'info, TokenAccount>,  // token_interface 대신 token 모듈 사용
     
-    pub lst_mint: InterfaceAccount<'info, MintInterface>,
+    pub lst_mint: Account<'info, Mint>,  // token_interface 대신 token 모듈 사용
     
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -867,20 +853,17 @@ pub struct ReleaseLockup<'info> {
     #[account(constraint = project.key() == lockup.project)]
     pub project: Account<'info, Project>,
     
-    #[account(
-        mut,
-        token::authority = user,
-    )]
-    pub user_token_account: InterfaceAccount<'info, TokenInterface>,
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,  // token_interface 대신 token 모듈 사용
     
     #[account(
         mut,
         associated_token::mint = lst_mint,
         associated_token::authority = lockup,
     )]
-    pub lockup_vault: InterfaceAccount<'info, TokenInterface>,
+    pub lockup_vault: Account<'info, TokenAccount>,  // token_interface 대신 token 모듈 사용
     
-    pub lst_mint: InterfaceAccount<'info, MintInterface>,
+    pub lst_mint: Account<'info, Mint>,  // token_interface 대신 token 모듈 사용
     
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
