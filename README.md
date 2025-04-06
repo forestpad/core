@@ -1,9 +1,7 @@
 # Forest Pad
-
 Forest Pad is an innovative platform built on Solana that bridges the gap between Liquid Staking Tokens (LSTs) and project fundraising. By leveraging Solana's SPL Stake Pool, Forest Lab enables projects to create their own LSTs, manage staking rewards, and build engaged communities.
 
 ## Core Concepts
-
 - **LST Creation**: Projects can launch their own LSTs through Solana's SPL Stake Pool
 - **Reward Management**: Automated epoch reward distribution with customizable fee structures
 - **Staking & Lockups**: Users can stake SOL to receive project-specific LSTs and lock them for bonus rewards
@@ -11,7 +9,6 @@ Forest Pad is an innovative platform built on Solana that bridges the gap betwee
 - **Multisig Management**: Enhanced security with multi-signature control for key project operations
 
 ## Technical Stack
-
 - **Blockchain**: Solana
 - **Smart Contract Framework**: Anchor Framework
 - **Language**: Rust
@@ -22,7 +19,6 @@ Forest Pad is an innovative platform built on Solana that bridges the gap betwee
 ## Key Features
 
 ### Platform Management
-
 The platform acts as a central hub for managing all projects within the Forest Lab ecosystem, handling global settings and collecting platform fees.
 
 ```rust
@@ -59,7 +55,6 @@ pub fn initialize_platform(
 ```
 
 ### Project Registration
-
 Projects can register on the platform with their own branding, LST token details, and fundraising goals.
 
 ```rust
@@ -125,7 +120,6 @@ pub fn register_project(
 ```
 
 ### Staking Management
-
 The platform handles staking operations through the Sanctum API, recording all staking activities on-chain for transparency.
 
 ```rust
@@ -177,8 +171,7 @@ pub fn record_project_stake(
 ```
 
 ### Epoch Rewards Processing
-
-At each epoch boundary, rewards are processed and distributed according to predefined rules.
+At each epoch boundary, rewards are processed and distributed according to predefined rules. The platform initially collects 100% of epoch rewards to enable precise SOL pegging and custom redistribution.
 
 ```rust
 pub fn process_epoch_rewards(
@@ -234,7 +227,6 @@ pub fn process_epoch_rewards(
 ```
 
 ### Lockup System
-
 Users can lock their LSTs for a period to earn bonus rewards, encouraging long-term commitment.
 
 ```rust
@@ -294,7 +286,6 @@ pub fn create_lockup(
 ```
 
 ### Reward Claim
-
 Users can claim their accumulated rewards from staking and lockups.
 
 ```rust
@@ -332,7 +323,6 @@ pub fn claim_rewards(
 ```
 
 ### Restaking Implementation
-
 Advanced yield strategy through restaking mechanisms.
 
 ```rust
@@ -374,27 +364,22 @@ pub fn restake_rewards(
 ```
 
 ## Setup and Deployment
-
 ### Prerequisites
-
 - Rust 1.70+ and Cargo
 - Solana CLI 1.16+
 - Anchor Framework 0.30.1+
 - Node.js 16+ and Yarn
 
 ### Installation
-
 1. Clone the repository:
    ```bash
    git clone https://github.com/team-seoulana/core.git
    cd core
    ```
-
 2. Install dependencies:
    ```bash
    yarn install
    ```
-
 3. Configure Anchor.toml:
    ```toml
    [toolchain]
@@ -405,31 +390,25 @@ pub fn restake_rewards(
    ```
 
 ### Build and Test
-
 1. Build the program:
    ```bash
    anchor build
    ```
-
 2. Run tests:
    ```bash
    anchor test
    ```
-
 ### Deployment
-
 1. Deploy to the Solana devnet:
    ```bash
    anchor deploy --provider.cluster devnet
    ```
-
 2. To deploy to Solana mainnet:
    ```bash
    anchor deploy --provider.cluster mainnet
    ```
 
 ## Contract Structure
-
 The contract is organized into multiple files for better code organization:
 
 - **lib.rs**: Main program logic and instruction handlers
@@ -441,3 +420,39 @@ The contract is organized into multiple files for better code organization:
 ## Integration with Sanctum
 
 This project relies on Sanctum's API for SPL Stake Pool operations. The Forest Lab contract handles the business logic and record-keeping, while actual staking operations are performed through Sanctum.
+
+## Future Developments
+
+### Enhanced Fee Redistribution System
+Forest Pad's unique approach to fee management involves collecting 100% of epoch rewards initially through the platform's management account. This enables several key advantages. The fee redistribution system provides these benefits.
+1. **Perfect SOL Pegging**: By controlling the entire reward flow, Forest Pad maintains precise SOL pegging
+2. **Customizable Revenue Models**: Projects can adjust reward distributions based on their unique needs (typically 2.5% to platform and flexible allocation of the remainder)
+3. **Enhanced Liquidity Management**: Prevents unexpected liquidity migrations by providing structural incentives
+
+### Project Pledging System
+To help projects build stronger communities around their LSTs, Forest Pad is developing a pledging system that allows LST holders to lock their tokens for additional project-specific rewards:
+* Encourage long-term LST holding through additional incentives
+* Distribute project tokens to their most committed supporters
+* Create marketing campaigns around LST locking events
+
+### JitoSOL Integration
+Future versions will expand to support Jito's MEV rewards, allowing for even greater yields through JitoSOL integration. This will provide additional value streams for LST holders while maintaining the same seamless user experience.
+
+* Capture additional MEV rewards beyond standard staking yields
+* Provide more competitive APYs to LST holders
+* Offer projects enhanced revenue streams
+
+## README: Understanding Forest Pad's Fee System
+Forest Pad introduces a revolutionary approach to LST management through its comprehensive fee redistribution system. Unlike traditional LST platforms with rigid fee structures, Forest Pad collects epoch rewards and enables dynamic redistribution:
+
+### Core Mechanism
+1. **Initial Collection**: All epoch rewards from validators flow to Forest Pad's account
+2. **Manager Control**: Project managers (or automated cranks) trigger redistribution
+3. **Flexible Allocation**: Standard split is 2.5% to platform, with the remainder divided between project treasury and LST holders according to project needs
+
+### For Projects
+By using Forest Pad, projects gain:
+* Complete control over reward distribution percentages
+* Ability to adjust distributions as project needs change
+* Strong LST holder retention through optimized incentives
+* Seamless integration with project-specific marketing campaigns
