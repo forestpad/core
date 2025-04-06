@@ -442,7 +442,7 @@ Future versions will expand to support Jito's MEV rewards, allowing for even gre
 * Provide more competitive APYs to LST holders
 * Offer projects enhanced revenue streams
 
-## README: Understanding Forest Pad's Fee System
+## Understanding Forest Pad's Fee System
 Forest Pad introduces a revolutionary approach to LST management through its comprehensive fee redistribution system. Unlike traditional LST platforms with rigid fee structures, Forest Pad collects epoch rewards and enables dynamic redistribution:
 
 ### Core Mechanism
